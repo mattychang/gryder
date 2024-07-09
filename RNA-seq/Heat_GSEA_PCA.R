@@ -18,18 +18,19 @@ sample.set = "RMS_IHK_RNA-seq_022924"
 EXP.coding.matrix = read.table(file.choose(), header = T)
 
 ## Define the gene list
-gene.list = read.table(file = "/Volumes/rc/SOM_GENE_BEG33/RNA_seq/hg38/projects/Genesets/IO_Custom_Genesets/A485_and_dCBP1_down.txt", sep="\t", header=F)
+gene.list = read.table(file = "/Volumes/rc/SOM_GENE_BEG33/RNA_seq/hg38/projects/Genesets/List_format/GRYDER_RH4_CR_TFs_CRISPRTop.genelist.txt", sep="\t", header=F)
 
-## Set the cutoff for minimal expression
+## Set the cutoff threshold for minimal expression
 cutoff.expression.min = 10
 
 ## Generating the filtered matrix
 EXP.expressed.matrix = EXP.coding.matrix                                                                      # create a copy of the expression matrix for filtering
 EXP.expressed.matrix$maxTPM = apply(EXP.expressed.matrix[, 2:(ncol(EXP.expressed.matrix) - 1)], 1, FUN=max)   # calculate the maximum TPM value for each gene across all samples
 
-## Filtering process
+## Filtering steps
 EXP.expressed.matrix = subset(EXP.expressed.matrix, EXP.expressed.matrix$maxTPM > cutoff.expression.min)      # subset the matrix to only include genes with a maximum TPM value above the threshold
 EXP.expressed.matrix.TFs = subset(EXP.expressed.matrix, EXP.expressed.matrix$gene_id %in% gene.list$V1)       # subset the matrix to only include genes in the gene.list
+rownames(EXP.expressed.matrix.TFs) <- EXP.expressed.matrix.TFs$gene_id                                        # match rownames with the gene_id
 
 ## Generate the heatmap (log2 transformation)
 ## Note: drop the first (gene_id) and last (maxTPM) columns
@@ -57,8 +58,5 @@ pheatmap(EXP.expressed.matrix.TFs[, 2:(ncol(EXP.expressed.matrix.TFs) - 1)],
          cluster_cols = mat_cluster_cols, 
          cluster_rows = TRUE, 
          main = paste(sample.set, " TPM heatmap with hierarchial clustering", sep = ""))
-
-
-
 
 ######################### end of heatmap #########################
