@@ -1,5 +1,10 @@
 # gryderlab
 
-Contains scripts used in RNA-seq: downloading samples from GEO, analysis.
+Analysis scripts used in RNA-seq and ChIP-seq.
 
-Basic plots: heatmaps, bubble plots, GSEA plot, volcano plot (can do only if you have multiple samples under the same condition). If you find a target/hit, you can show the difference in expression between conditions using heatmap/bubble plot/box plot. 
+## RNA-seq
+`buildTPM.R` builds an expression (TPM) matrix from the multiple .tdf files.
+
+`Heat_GSEA_PCA.R` builds heatmaps, GSEA ranks, and PCA plots from the expression matrix.
+
+## ChIP-seq
