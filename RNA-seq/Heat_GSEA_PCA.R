@@ -179,21 +179,51 @@ print(plot.pca)
 setwd("/Volumes/SOM_GENE_BEG33/RNA_seq/hg38/")
 project.folder = "/Volumes/SOM_GENE_BEG33/RNA_seq/hg38/projects/IHK_RMS/Practice_MSC"
 EXP.coding.matrix = read.table(file.choose(), header = T)
-      
+
 ## Create a directory for the GSEA ranklists and create the log2FC matrix
-sample.set = "IHK_44"
-dir.create(file.path(project.folder, "GSEA_ranklist",sample.set))
+dir.create(file.path(project.folder, "GSEA_ranklist"))
 EXP.GSEA = EXP.coding.matrix
 
 ## Calculate log2FC for each sample and add as new column
-EXP.GSEA$ = log2(<sample_name> + 1) - log2(RH4_NT_2h + 1)
+EXP.GSEA$RH4_DMSO_2h = log2(EXP.GSEA$RH4_DMSO_2h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_2h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_DMSO_6h = log2(EXP.GSEA$RH4_DMSO_6h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_6h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_A485_100nM_2h = log2(EXP.GSEA$RH4_A485_100nM_2h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_2h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_A485_1uM_2h = log2(EXP.GSEA$RH4_A485_1uM_2h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_2h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_A485_100nM_6h = log2(EXP.GSEA$RH4_A485_100nM_6h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_6h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_A485_1uM_6h = log2(EXP.GSEA$RH4_A485_1uM_6h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_6h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_JQAD_100nM_2h = log2(EXP.GSEA$RH4_JQAD_100nM_2h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_2h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_JQAD_1uM_2h = log2(EXP.GSEA$RH4_JQAD_1uM_2h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_2h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_JQAD_100nM_6h = log2(EXP.GSEA$RH4_JQAD_100nM_6h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_6h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_JQAD_1uM_6h = log2(EXP.GSEA$RH4_JQAD_1uM_6h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_6h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_dCBP_100nM_2h = log2(EXP.GSEA$RH4_dCBP_100nM_2h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_2h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_dCBP_1uM_2h = log2(EXP.GSEA$RH4_dCBP_1uM_2h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_2h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_dCBP_100nM_6h = log2(EXP.GSEA$RH4_dCBP_100nM_6h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_6h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_dCBP_1uM_6h = log2(EXP.GSEA$RH4_dCBP_1uM_6h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_6h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_QL_100nM_2h = log2(EXP.GSEA$RH4_QL_100nM_2h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_2h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_QL_1uM_2h = log2(EXP.GSEA$RH4_QL_1uM_2h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_2h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_QL_100nM_6h = log2(EXP.GSEA$RH4_QL_100nM_6h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_6h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_QL_1uM_6h = log2(EXP.GSEA$RH4_QL_1uM_6h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_6h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_LS_100nM_2h = log2(EXP.GSEA$RH4_LS_100nM_2h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_2h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_LS_1uM_2h = log2(EXP.GSEA$RH4_LS_1uM_2h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_2h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_LS_100nM_6h = log2(EXP.GSEA$RH4_LS_100nM_6h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_6h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_LS_1uM_6h = log2(EXP.GSEA$RH4_LS_1uM_6h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_6h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_IHK44_100nM_2h = log2(EXP.GSEA$RH4_IHK44_100nM_2h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_2h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_IHK44_1uM_2h = log2(EXP.GSEA$RH4_IHK44_1uM_2h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_2h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_IHK44_100nM_6h = log2(EXP.GSEA$RH4_IHK44_100nM_6h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_6h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_IHK44_1uM_6h = log2(EXP.GSEA$RH4_IHK44_1uM_6h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_6h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_IHK45_100nM_2h = log2(EXP.GSEA$RH4_IHK45_100nM_2h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_2h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_IHK45_1uM_2h = log2(EXP.GSEA$RH4_IHK45_1uM_2h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_2h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_IHK45_100nM_6h = log2(EXP.GSEA$RH4_IHK45_100nM_6h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_6h_RNA_022924_CWRU + 1)
+EXP.GSEA$RH4_IHK45_1uM_6h = log2(EXP.GSEA$RH4_IHK45_1uM_6h_RNA_022924_CWRU + 1) - log2(EXP.GSEA$RH4_NT_6h_RNA_022924_CWRU + 1)
+# there should be 63 columns
+
 
 ## Round the log2FC to 5 sig figs
-EXP.GSEA[,(ncol(RMS_SE_EDEN) + 1) : ncol(EXP.GSEA)] = round(EXP.GSEA[,(ncol(RMS_SE_EDEN) + 1) : ncol(EXP.GSEA)], digits = 5)
+EXP.GSEA[,(ncol(EXP.coding.matrix) + 1) : ncol(EXP.GSEA)] = round(EXP.GSEA[,(ncol(EXP.coding.matrix) + 1) : ncol(EXP.GSEA)], digits = 5)
 
 ## Loop through the new columns, create rank lists, and save them to files
-for (i in (ncol(RMS_SE_EDEN)+1):ncol(EXP.GSEA)) {
-    
+for (i in (ncol(EXP.coding.matrix)+1):ncol(EXP.GSEA)) {
+  
     # initialize rank list with gene names
     Ranklist <- data.frame(EXP.GSEA[, 4])
     
@@ -212,7 +242,6 @@ for (i in (ncol(RMS_SE_EDEN)+1):ncol(EXP.GSEA)) {
     # Define the file path
     myfile <- file.path(project.folder, 
                         "GSEA_ranklist", 
-                        sample.set, 
                         paste0(SampleName,"_",mytime,".rnk"))
     
     # Save the rank list to a file
@@ -224,6 +253,11 @@ for (i in (ncol(RMS_SE_EDEN)+1):ncol(EXP.GSEA)) {
                 quote = FALSE, 
                 append = FALSE)
 }
+
+
+
+
+
 
 
 
