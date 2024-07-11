@@ -1,4 +1,4 @@
-# gryderlab
+# gryder
 
 Analysis scripts used in RNA-seq and ChIP-seq.
 
