@@ -9,4 +9,6 @@ Analysis scripts used in RNA-seq and ChIP-seq.
 
 `gatherGSEA.R` overlaps GSEA plots.
 
+`Heat_more.R` makes more heatmaps and other plots.
+
 ## ChIP-seq
