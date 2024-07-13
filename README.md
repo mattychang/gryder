@@ -7,7 +7,7 @@ Analysis scripts used in RNA-seq and ChIP-seq.
 
 `Heat_PCA_GSEA.R` builds heatmaps, PCA plots, GSEA ranklist from the expression (TPM) matrix.
 
-`gatherGSEA.R` overlaps GSEA plots.
+`gatherGSEA.R` overlaps GSEA plots and provides further analysis.
 
 `Heat_more.R` makes more heatmaps and other plots.
 
