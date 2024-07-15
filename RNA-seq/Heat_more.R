@@ -23,19 +23,18 @@ library(pheatmap)
 library(ggplot2)
 library(reshape2)
 
-setwd("/Users/matthewchang/Documents/R/")
+setwd("/Volumes/rc-1//SOM_GENE_BEG33/RNA_seq/hg38/projects/RMS_IHK/Practice_MSC/ExpMatrices")
 EXP.coding.matrix = read.table(file.choose(), header = T)
 EXP.select.matrix = EXP.coding.matrix    # copy over expression matrix
 
-setwd("/Users/matthewchang/Documents/R/")
+setwd("/Volumes/rc-1//SOM_GENE_BEG33/RNA_seq/hg38/projects/RMS_IHK/Practice_MSC")
 gene.list = read.table(file.choose(), header = F, stringsAsFactors = F)     # selected GRYDER_RH4_CR_TFs_CRISPRTop.genelist.txt
 genes = gene.list$V1
 
 ### OPTIONAL: Subset samples
-samples.to.keep <- c("RH4_IHK44_1uM_6h_RNA_022924_CWRU", "RH4_IHK44_100nM_6h_RNA_022924_CWRU",
-                     "RH4_IHK44_1uM_2h_RNA_022924_CWRU", "RH4_IHK44_100nM_2h_RNA_022924_CWRU",
-                     "RH4_dCBP_1uM_6h_RNA_022924_CWRU", "RH4_dCBP_100nM_6h_RNA_022924_CWRU",
-                     "RH4_dCBP_1uM_2h_RNA_022924_CWRU", "RH4_dCBP_100nM_2h_RNA_022924_CWRU")
+samples.to.keep <- c("RH4_DMSO_2h_RNA_022924_CWRU", "RH4_DMSO_6h_RNA_022924_CWRU",
+                     "RH4_IHK44_1uM_6h_RNA_022924_CWRU", "RH4_IHK44_100nM_6h_RNA_022924_CWRU",
+                     "RH4_IHK44_1uM_2h_RNA_022924_CWRU", "RH4_IHK44_100nM_2h_RNA_022924_CWRU")
 sample.indices = which(colnames(EXP.coding.matrix) %in% c("gene_id", samples.to.keep))
 EXP.select.matrix = EXP.coding.matrix[, sample.indices]
 
@@ -49,6 +48,11 @@ EXP.select.matrix = EXP.coding.matrix[, sample.indices]
 ### Functions
 # Creates heatmap
 create_heatmap_normalized = function(data, gene) {
+  if (nrow(data) == 0 || ncol(data) == 0) {
+    message("Data for heatmap is empty for gene: ", gene)
+    return(NULL)
+  }
+  
   pheatmap(data,
            cluster_rows = F, 
            cluster_cols = F, 
@@ -57,7 +61,7 @@ create_heatmap_normalized = function(data, gene) {
            show_colnames = T,
            angle_col = 45,
            breaks = seq(0, 1, length.out = 101), # Fixed normalized expression gradient
-           main = paste("Normalization Expression for", gene))
+           main = paste(gene))
 }
 
 # Creates bar chart
@@ -68,17 +72,18 @@ create_bar_chart_normalized <- function(data, gene) {
   ggplot(data_melt, aes(x = Timepoint, y = Value, fill = Condition)) +
     geom_bar(stat = "identity", position = position_dodge()) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-    labs(title = paste("Normalized Expression Levels for", gene), y = "Normalized Value") +
+    labs(title = paste(gene), y = "Normalized Value") +
     ylim(0, 1)  # Set y-axis limits from 0 to 1
 }
 
-### Loop through each gene and generates a heatmap of the normalized expression values
+### Loop through each gene and generate a heatmap of the normalized expression values
 for (gene in genes) {
   # Filter TPM matrix to only include the gene of interest
   EXP.filtered.matrix = EXP.select.matrix[EXP.select.matrix$gene_id == gene, ]
   
   # Safety check: if gene not found, then skip to the next gene
   if (nrow(EXP.filtered.matrix) == 0) {
+    message("Gene not found: ", gene)
     next
   }
   
@@ -124,16 +129,22 @@ for (gene in genes) {
   # Transform matrix to df
   heatmap.data = as.data.frame(heatmap.data)
   
+  # Convert logical values to numeric before any operations that require numeric input
+  heatmap.data <- apply(heatmap.data, 2, function(x) as.numeric(x))
+  
   # Safety check: remove columns with any NA values
   heatmap.data = heatmap.data[, colSums(is.na(heatmap.data)) == 0]
   
+  # Check if heatmap.data is empty after filtering NAs
+  if (ncol(heatmap.data) == 0 || nrow(heatmap.data) == 0) {
+    message("No valid data to plot for gene: ", gene)
+    next
+  }
+  
   # Plot
-  # create_heatmap_normalized(heatmap.data, gene)
-  print(create_bar_chart_normalized(heatmap.data, gene))
+  create_heatmap_normalized(heatmap.data, gene)
+  # print(create_bar_chart_normalized(heatmap.data, gene))
 }
-
-
-
 
 
 
@@ -144,7 +155,12 @@ for (gene in genes) {
 ### Functions
 # Creates heatmap
 create_heatmap_log2 = function(data, gene) {
-  pheatmap(heatmap.data, 
+  if (nrow(data) == 0 || ncol(data) == 0) {
+    message("Data for heatmap is empty for gene: ", gene)
+    return(NULL)
+  }
+  
+  pheatmap(data, 
            cluster_rows = F, 
            cluster_cols = F, 
            scale = "none", 
@@ -152,18 +168,23 @@ create_heatmap_log2 = function(data, gene) {
            show_colnames = T,
            angle_col = 45,
            breaks = seq(global.min, global.max, length.out = 101),  # Fixed log2 color scale
-           main = paste("Log2(TPM + 1) for", gene))
+           main = paste(gene))
 }
 
 # Creates bar chart
 create_bar_chart_log2 <- function(data, gene) {
+  if (nrow(data) == 0 || ncol(data) == 0) {
+    message("Data for bar chart is empty for gene: ", gene)
+    return(NULL)
+  }
+  
   data <- cbind(Timepoint = rownames(data), data)
   data_melt <- reshape2::melt(data, id.vars = "Timepoint")
   colnames(data_melt) <- c("Timepoint", "Condition", "Value")
   ggplot(data_melt, aes(x = Timepoint, y = Value, fill = Condition)) +
     geom_bar(stat = "identity", position = position_dodge()) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-    labs(title = paste("Log2(TPM + 1) Expression Levels for", gene), y = "Log2(TPM + 1)") +
+    labs(title = paste(gene), y = "Log2(TPM + 1)") +
     ylim(global.min, global.max)  # Adjust y-axis limits according to your data range
 }
 
@@ -179,6 +200,7 @@ for (gene in genes) {
   
   # Safety check: if gene not found, then skip to the next gene
   if (nrow(EXP.filtered.matrix) == 0) {
+    message("Gene not found: ", gene)
     next
   }
   
@@ -223,12 +245,21 @@ for (gene in genes) {
   # Transform matrix to df for heatmap
   heatmap.data = as.data.frame(heatmap.data)
   
+  # Convert logical values to numeric before any operations that require numeric input
+  heatmap.data <- apply(heatmap.data, 2, function(x) as.numeric(x))
+  
   # Safety check: remove columns with any NA values
   heatmap.data = heatmap.data[, colSums(is.na(heatmap.data)) == 0]
   
+  # Check if heatmap.data is empty after filtering NAs
+  if (ncol(heatmap.data) == 0 || nrow(heatmap.data) == 0) {
+    message("No valid data to plot for gene: ", gene)
+    next
+  }
+  
   # Plot
-  # create_heatmap_log2(heatmap.data, gene)
-  print(create_bar_chart_log2(heatmap.data, gene))
+  create_heatmap_log2(heatmap.data, gene)
+  # print(create_bar_chart_log2(heatmap.data, gene))
 }
 
 
@@ -244,6 +275,11 @@ z_score_transform <- function(x) {
 
 # Creates heatmap
 create_heatmap_z <- function(data, gene) {
+  if (nrow(data) == 0 || ncol(data) == 0) {
+    message("Data for heatmap is empty for gene: ", gene)
+    return(NULL)
+  }
+  
   pheatmap(data, 
            cluster_rows = F, 
            cluster_cols = F, 
@@ -252,18 +288,23 @@ create_heatmap_z <- function(data, gene) {
            show_colnames = T,
            angle_col = 45,
            breaks = seq(-3, 3, length.out = 101),  # Z-score color scale
-           main = paste("Z-score Transformation for", gene))
+           main = paste(gene))
 }
 
 # Creates bar chart
 create_bar_chart_z <- function(data, gene) {
+  if (nrow(data) == 0 || ncol(data) == 0) {
+    message("Data for bar chart is empty for gene: ", gene)
+    return(NULL)
+  }
+  
   data <- cbind(Timepoint = rownames(data), data)
   data_melt <- reshape2::melt(data, id.vars = "Timepoint")
   colnames(data_melt) <- c("Timepoint", "Condition", "Value")
   ggplot(data_melt, aes(x = Timepoint, y = Value, fill = Condition)) +
     geom_bar(stat = "identity", position = position_dodge()) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-    labs(title = paste("Z-score Expression Levels for", gene), y = "Z-score") +
+    labs(title = paste(gene), y = "Z-score") +
     ylim(-3, 3)  # Set y-axis limits from -3 to 3 for z-score
 }
 
@@ -274,6 +315,7 @@ for (gene in genes) {
   
   # Safety check: if gene not found, then skip to the next gene
   if (nrow(EXP.filtered.matrix) == 0) {
+    message("Gene not found: ", gene)
     next
   }
   
@@ -281,7 +323,7 @@ for (gene in genes) {
   rownames(EXP.filtered.matrix) = EXP.filtered.matrix$gene_id
   EXP.filtered.matrix = EXP.filtered.matrix[, -1]
   
-  # Log2 transformation: log2(TPM + 1)
+  # Z-score transformation
   EXP.filtered.matrix.z = t(apply(EXP.filtered.matrix, 1, z_score_transform))
   
   # Create lists to store the sample's drug, dosage, and timepoint information
@@ -318,10 +360,19 @@ for (gene in genes) {
   # Transform matrix to df for heatmap
   heatmap.data = as.data.frame(heatmap.data)
   
+  # Convert logical values to numeric before any operations that require numeric input
+  heatmap.data <- apply(heatmap.data, 2, function(x) as.numeric(x))
+  
   # Safety check: remove columns with any NA values
   heatmap.data = heatmap.data[, colSums(is.na(heatmap.data)) == 0]
   
+  # Check if heatmap.data is empty after filtering NAs
+  if (ncol(heatmap.data) == 0 || nrow(heatmap.data) == 0) {
+    message("No valid data to plot for gene: ", gene)
+    next
+  }
+  
   # Plot
-  # create_heatmap_z(heatmap.data, gene)
-  print(create_bar_chart_z(heatmap.data, gene))
+  create_heatmap_z(heatmap.data, gene)
+  # print(create_bar_chart_z(heatmap.data, gene))
 }
