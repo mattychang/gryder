@@ -7,12 +7,12 @@ library(dendsort)
 project.folder = "/Users/matthewchang/Documents/R/"
 
 setwd("/Users/matthewchang/Documents/R/ExpMatrices/")
-EXP.coding.matrix = read.table("IHK_samples.coding.norm.matrix.txt", header = T)                                                       # read TPM matrix
+EXP.coding.matrix = read.table("IHK_samples.coding.norm.matrix.txt", header = T)                                # read in TPM matrix
 
 setwd("/Users/matthewchang/Documents/R/GeneSets/")
-gene.list = read.table(file.choose(), sep = "\t", header = F)                                                   # read gene list
+gene.list = read.table(file.choose(), sep = "\t", header = F)                                                   # read in gene list
 
-## OPTIONAL: subset samples
+## subset samples
 EXP.coding.matrix = EXP.coding.matrix %>% select(-((ncol(EXP.coding.matrix) - 3):ncol(EXP.coding.matrix)))      # dropping the last 4 columns (IHK45)
 
 
@@ -46,10 +46,15 @@ annotations = data.frame(
                   "Control/selective degraders", "Control/selective degraders", "Control/selective degraders", "Control/selective degraders", 
                   "Dual inhibitors/degraders", "Dual inhibitors/degraders", "Dual inhibitors/degraders", "Dual inhibitors/degraders")
 )
-rownames(annotations) = rownames(EXP.expressed.matrix.TFs)                                                      # match rownames in annotations with EXP.expressed.matrix.TFs
+rownames(annotations) = rownames(EXP.expressed.matrix.TFs)
+annotation_colors = list(
+  SampleGroup = c("Control/selective degraders" = "darkgoldenrod1", 
+                  "Dual inhibitors/degraders" = "tomato")
+)
 
-## Generate the heatmap (log2 transformation)
-## OPTIONAL: z-score / scale = 'row' or 'none'
+# Generate the custom color scale from white to blue
+color_scale = colorRampPalette(c("gray99", "plum2", "mediumvioletred"))(100)
+
 pheatmap(log2(EXP.expressed.matrix.TFs + 1), 
          cluster_rows = T, 
          cluster_cols = T, 
@@ -58,9 +63,64 @@ pheatmap(log2(EXP.expressed.matrix.TFs + 1),
          show_colnames = T, 
          angle_col = 315, 
          annotation_row = annotations,
-         main = paste("Log2(TPM + 1)"))
+         main = paste("Log2(TPM + 1)"),
+         color = color_scale,
+         annotation_colors = annotation_colors)
+
+
+
+
+
+
+
+
+
+
+
+
+
+## heatmap of log2FC vs DMSO
+setwd("/Users/matthewchang/Documents/R/GSEA_log2FC/p300_samples/")
+EXP.log2FC.heat = read.table("EXP.log2FC.txt", header = T, row.names = 1)                                       # read in log2FC values
+
+colnames(EXP.log2FC.heat) = gsub("^RH4_", "", colnames(EXP.log2FC.heat))                                        # removed "RH4_"
+EXP.log2FC.heat = EXP.log2FC.heat[rownames(EXP.log2FC) %in% gene.list$V1, ]                                     # filter genes from gene.list
+EXP.log2FC.heat = as.matrix(t(EXP.log2FC.heat))                                                                 # transposed matrix
+
+## OPTIONAL: separate samples by group
+annotations = data.frame(
+  SampleGroup = c("Dual inhibitors/degraders", "Dual inhibitors/degraders", "Dual inhibitors/degraders", "Dual inhibitors/degraders", 
+                  "Selective degraders", "Selective degraders", "Selective degraders", "Selective degraders",
+                  "Dual inhibitors/degraders", "Dual inhibitors/degraders", "Dual inhibitors/degraders", "Dual inhibitors/degraders",
+                  "Selective degraders", "Selective degraders", "Selective degraders", "Selective degraders", 
+                  "Selective degraders", "Selective degraders", "Selective degraders", "Selective degraders", 
+                  "Dual inhibitors/degraders", "Dual inhibitors/degraders", "Dual inhibitors/degraders", "Dual inhibitors/degraders")
+)
+rownames(annotations) = rownames(EXP.log2FC.heat)
+annotation_colors = list(
+  SampleGroup = c("Selective degraders" = "darkgoldenrod1", 
+                  "Dual inhibitors/degraders" = "tomato")
+)
+
+color_scale = colorRampPalette(c("cornflowerblue", "cadetblue3", "gray99"))(100)
+
+pheatmap(EXP.log2FC.heat, 
+         cluster_rows = T, 
+         cluster_cols = T, 
+         scale = 'none', 
+         show_rownames = T, 
+         show_colnames = T, 
+         angle_col = 315, 
+         annotation_row = annotations,
+         main = paste("Log2FC"),
+         color = color_scale,
+         annotation_colors = annotation_colors)
+
+
 
 ######################### end of heatmap #########################
+
+
 
 
 
@@ -126,16 +186,17 @@ print(plot.pca)
 
 
 
+
 ### 5. make GSEA ranklists
 ### Goal: To create rank lists for Gene Set Enrichment Analysis (GSEA) by calculating log2 fold changes (log2FC) for comparisons.
 ### Pre-requisites: TPM matrix
 ### Notes: You must specify the log2FC for the samples of interest by hand
 
 ## Load in TPM expression matrix
-setwd("/Volumes/rc/SOM_GENE_BEG33/RNA_seq/hg38/")
-project.folder = "/Volumes/rc/SOM_GENE_BEG33/RNA_seq/hg38/projects/RMS_IHK/Practice_MSC"
+setwd("/Users/matthewchang/Documents/R/ExpMatrices/")
+project.folder = "/Users/matthewchang/Documents/R/"
 sample.set = "p300_samples"
-EXP.coding.matrix = read.table(file.choose(), header = T)
+EXP.coding.matrix = read.table("IHK_samples.coding.norm.matrix.txt", header = T)
 
 ## Create a directory for the GSEA ranklists and create the log2FC matrix
 dir.create(file.path(project.folder, "GSEA_ranklist", sample.set), recursive = T)
@@ -183,7 +244,7 @@ for (i in (ncol(EXP.coding.matrix) + 1):ncol(EXP.GSEA)) {
   Ranklist = Ranklist[rev(order(Ranklist$DeltaTPM)), ]                                                          # sort the rank list by DeltaTPM in descending order
   SampleName = colnames(EXP.GSEA)[i]                                                                            # get the name of the current comparison
   mytime <- format(Sys.time(), "%b_%d_%Y")                                                                      # get the current date
-  myfile <- file.path(project.folder, "GSEA_ranklist", sample.set, paste0(SampleName,"_",mytime,".rnk"))                    # define file path
+  myfile <- file.path(project.folder, "GSEA_ranklist", sample.set, paste0(SampleName,"_",mytime,".rnk"))        # define file path
   write.table(Ranklist, file = myfile, sep = "\t", row.names = F, col.names = F, quote = F, append = F)         # save the ranklist
 }
 
@@ -194,284 +255,12 @@ for (i in (ncol(EXP.coding.matrix) + 1):ncol(EXP.GSEA)) {
 #  Max size: 5000
 #  Min size: 10
 
+# OPTIONAL: export log2FC df to project.folder
+exported.columns = EXP.GSEA[, 30:ncol(EXP.GSEA)]
+rownames(exported.columns) = EXP.coding.matrix$gene_id
+export.file = file.path(project.folder, "GSEA_log2FC", sample.set, "EXP.log2FC.txt")
+dir.create(file.path(project.folder, "GSEA_log2FC", sample.set), recursive = T)
+write.table(exported.columns, file = export.file, sep = "\t", row.names = T, col.names = T, quote = F)
+
+
 ######################### end of making GSEA ranklists #########################
-
-
-
-
-
-
-
-
-
-
-
-
-# boxplot/violin plot by log2FC by condition separated by multiple genesets
-# note: all coding genes did not show me anything good
-
-
-
-# Load necessary libraries
-library(tidyverse)
-
-# Define the sample names of interest
-sample_names_of_interest <- c("DMSO_6h", "A485_1uM_6h", "dCBP_1uM_6h", "IHK44_1uM_6h", "JQAD_1uM_6h", "LS_1uM_6h", "QL_1uM_6h")
-
-# Set working directory and read the gene set of interest
-setwd("/Users/matthewchang/Documents/R/GeneSets/")
-RH4_CR_TFs <- read.table("GRYDER_RH4_CR_TFs.genelist.txt", header = FALSE, stringsAsFactors = FALSE)
-
-# Create log2FC df
-EXP.log2FC <- EXP.GSEA[, 30:ncol(EXP.GSEA)]
-colnames(EXP.log2FC) <- gsub("^RH4_", "", colnames(EXP.log2FC))
-rownames(EXP.log2FC) <- EXP.coding.matrix$gene_id
-
-# Transpose the DataFrame
-EXP.filtered_t <- as.data.frame(t(EXP.log2FC))
-EXP.filtered_t <- rownames_to_column(EXP.filtered_t, var = "sample_name")
-
-# Gather the data to long format
-EXP_long <- EXP.filtered_t %>%
-  gather(key = "gene", value = "log2FC", -sample_name)
-
-# Filter for the specified sample names
-EXP_filtered_samples <- EXP_long %>%
-  filter(sample_name %in% sample_names_of_interest)
-
-# Filter for genes in the specified gene set
-EXP_filtered_samples <- EXP_filtered_samples %>%
-  filter(gene %in% RH4_CR_TFs$V1)
-
-# Set the order of sample names
-EXP_filtered_samples$sample_name <- factor(EXP_filtered_samples$sample_name, levels = sample_names_of_interest)
-
-# Create the violin plot with overlaid boxplot for the specified samples, without showing outliers
-ggplot(EXP_filtered_samples, aes(x = sample_name, y = log2FC, fill = sample_name)) +
-  geom_violin(alpha = 0.5) + 
-  geom_boxplot(width = 0.1, color = "black", alpha = 0.7, outlier.shape = NA) +  # Boxplot without outliers
-  labs(x = "Sample Name", 
-       y = "Log2FC", 
-       title = "Boxplot of Log2FC values for specified samples (RH4 CR TFs)") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-# Calculate summary statistics for each specified sample
-summary_stats <- EXP_filtered_samples %>%
-  group_by(sample_name) %>%
-  summarize(
-    count = n(),
-    mean = mean(log2FC),
-    median = median(log2FC),
-    sd = sd(log2FC),
-    min = min(log2FC),
-    max = max(log2FC),
-    q1 = quantile(log2FC, 0.25),
-    q3 = quantile(log2FC, 0.75),
-    iqr = IQR(log2FC)
-  )
-
-# Print the summary statistics
-print(summary_stats)
-
-
-
-
-
-
-
-
-
-
-
-# rankplot (single sample across all coding genes), prints the list of the 20 most downregulated genes by log2FC
-# can change to include multiple sameples (overlap)
-# can change to include a specific gene set
-
-# Define the sample name of interest
-sample_name_of_interest <- "QL_100nM_2h"
-
-# Set working directory and read the gene set of interest
-setwd("/Users/matthewchang/Documents/R/GeneSets/")
-RH4_CR_TFs <- read.table("GRYDER_RH4_CR_TFs.genelist.txt", header = FALSE, stringsAsFactors = FALSE)
-
-# Filter for the specified sample name
-EXP_single_sample <- EXP_long %>%
-  filter(sample_name == sample_name_of_interest)
-
-# Rank the Log2FC values for the single sample
-EXP_ranked <- EXP_single_sample %>%
-  arrange(log2FC) %>%
-  mutate(rank = row_number(),
-         is_target_gene = gene %in% RH4_CR_TFs$V1)
-
-# Create the rank plot for the specified sample with highlighted target genes
-ggplot(EXP_ranked, aes(x = rank, y = log2FC)) +
-  geom_point(aes(color = is_target_gene), alpha = 0.5) +
-  labs(x = "Rank", 
-       y = "Log2FC", 
-       title = paste("Rank Plot of Log2FC Values for", sample_name_of_interest, "across All Coding Genes")) +
-  scale_color_manual(values = c("grey", "red"), name = "Target Gene", labels = c("Non-target", "Target")) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-
-# Print the ranks and Log2FC values of the target genes
-target_gene_ranks <- EXP_ranked %>%
-  filter(is_target_gene) %>%
-  select(gene, rank, log2FC)
-
-print(target_gene_ranks)
-
-
-
-
-# rankplot of log2FC for proteomics IHK44_100nM data
-
-# Load data
-data <- read.csv("/Users/matthewchang/Documents/R/240313_DMSOvs100nM_IHK44_stats_table.csv")
-
-# Set working directory and read the gene set of interest
-setwd("/Users/matthewchang/Documents/R/GeneSets/")
-RH4_CR_TFs <- read.table("GRYDER_RH4_CR_TFs.genelist.txt", header = FALSE, stringsAsFactors = FALSE)
-
-# Remove rows with missing values in log2_fold_change
-data <- data %>%
-  filter(!is.na(log2_fold_change))
-
-# Remove "_HUMAN" suffix from Protein.Names
-data <- data %>%
-  mutate(Protein.Names = str_remove(Protein.Names, "_HUMAN"))
-
-# Create a rank column based on log2_fold_change
-data <- data %>%
-  mutate(Rank = rank(log2_fold_change, ties.method = "first"),
-         is_target_gene = Protein.Names %in% RH4_CR_TFs$V1)
-
-# Plot the rank plot with highlighted target genes
-ggplot(data, aes(x = Rank, y = log2_fold_change)) +
-  geom_point(aes(color = is_target_gene), alpha = 0.5) +
-  labs(title = "Rank Plot of Proteomics Data",
-       x = "Rank",
-       y = "Log2 Fold Change") +
-  scale_color_manual(values = c("grey", "red"), name = "Target Gene", labels = c("Non-target", "Target")) +
-  theme_minimal()
-
-# Print the ranks and log2_fold_change values of the target genes
-target_gene_ranks <- data %>%
-  filter(is_target_gene) %>%
-  select(Protein.Names, Rank, log2_fold_change)
-
-print(target_gene_ranks)
-
-# Display the 20 most downregulated genes
-most_downregulated <- data %>%
-  arrange(log2_fold_change) %>%
-  head(20) %>%
-  select(Protein.Names, log2_fold_change, Rank)
-
-print(most_downregulated)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# bar chart of multiple samples on a single gene, emphasizing effect of time based on dosage
-# can change to show effect of concentration based on time
-# can change to show TPM instead of log2(TPM + 1)
-
-# Load necessary libraries
-library(tidyverse)
-
-# Create TPM df
-EXP.TPM <- EXP.coding.matrix
-colnames(EXP.TPM) <- gsub("^RH4_", "", colnames(EXP.TPM))
-colnames(EXP.TPM) <- gsub("_RNA_022924_CWRU", "", colnames(EXP.TPM))
-rownames(EXP.TPM) <- EXP.coding.matrix$gene_id
-
-# Define the sample names of interest
-sample_names_of_interest <- c("DMSO_2h", "A485_1uM_2h", "IHK44_1uM_2h", "dCBP_1uM_2h", "JQAD_1uM_2h", "LS_1uM_2h", "QL_1uM_2h",
-                              "DMSO_6h", "A485_1uM_6h", "IHK44_1uM_6h", "dCBP_1uM_6h", "JQAD_1uM_6h", "LS_1uM_6h", "QL_1uM_6h")
-
-# Define the desired order of samples
-desired_order <- sample_names_of_interest
-
-# Define the gene of interest
-gene_of_interest <- "SOX8"
-
-# Transpose the DataFrame
-EXP.filtered_t <- as.data.frame(t(EXP.TPM))
-EXP.filtered_t <- rownames_to_column(EXP.filtered_t, var = "sample_name")
-
-# Gather the data to long format
-EXP_long <- EXP.filtered_t %>%
-  gather(key = "gene", value = "TPM", -sample_name)
-
-# Ensure TPM values are numeric
-EXP_long <- EXP_long %>%
-  mutate(TPM = as.numeric(TPM))
-
-# Filter for the specified sample names and the gene of interest
-EXP_filtered_samples <- EXP_long %>%
-  filter(sample_name %in% sample_names_of_interest & gene == gene_of_interest)
-
-# Extract time point information
-EXP_filtered_samples <- EXP_filtered_samples %>%
-  mutate(time_point = ifelse(grepl("_2h$", sample_name), "2h", "6h"))
-
-# Convert sample_name to factor and set the desired order
-EXP_filtered_samples <- EXP_filtered_samples %>%
-  mutate(sample_name = factor(sample_name, levels = desired_order))
-
-# Calculate log2(TPM + 1)
-EXP_filtered_samples <- EXP_filtered_samples %>%
-  mutate(log2_TPM = log2(TPM + 1))
-
-# Define color scheme
-color_scheme <- c(
-  "DMSO_2h" = "grey", "DMSO_6h" = "grey",
-  "A485_1uM_2h" = "red", "A485_1uM_6h" = "red",
-  "IHK44_1uM_2h" = "gold", "IHK44_1uM_6h" = "gold",
-  "dCBP_1uM_2h" = "skyblue", "dCBP_1uM_6h" = "skyblue",
-  "JQAD_1uM_2h" = "darkgreen", "JQAD_1uM_6h" = "darkgreen",
-  "LS_1uM_2h" = "darkorchid1", "LS_1uM_6h" = "darkorchid1",
-  "QL_1uM_2h" = "lemonchiffon3", "QL_1uM_6h" = "lemonchiffon3"
-)
-
-# Create the bar plot comparing the 2h and 6h changes
-ggplot(EXP_filtered_samples, aes(x = sample_name, y = log2_TPM, fill = sample_name)) +
-  geom_bar(stat = "identity", position = position_dodge()) +
-  scale_fill_manual(values = color_scheme) +  # Apply color scheme
-  facet_wrap(~ time_point, scales = "free_x") +  # Facet by time point
-  labs(x = "Sample Name", 
-       y = "log2(TPM + 1)", 
-       title = paste("log2(TPM + 1) for", gene_of_interest, "across Samples")) +
-  theme_minimal() +
-  theme(axis.text.x = element_blank())
-
