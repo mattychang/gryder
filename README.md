@@ -9,6 +9,6 @@ Analysis scripts used in RNA-seq and ChIP-seq.
 
 `gatherGSEA.R` builds various GSEA plots.
 
-`custom_more.R` makes other plots.
+`custom_plots.R` makes other plots.
 
 ## ChIP-seq
