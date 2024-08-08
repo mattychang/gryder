@@ -1,6 +1,6 @@
 # gryder
 
-Analysis scripts used in RNA-seq and ChIP-seq.
+Bioinformatics analysis scripts used for RNA-seq and ChIP-seq.
 
 ## RNA-seq
 `buildTPM.R` builds an expression (TPM) matrix from .tdf files.
