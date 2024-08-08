@@ -1,8 +1,11 @@
-### Author: Matthew Chang
-### More heatmaps for RNA-seq (looking by gene separated by timepoint, conc and drug tx)
+### Updated: 08.08.2024 (Matt)
+
+### 1. More heatmaps for RNA-seq 
+# note: looking by gene separated by timepoint, conc and drug tx
 
 ### Functions
 # Extracts drug, dosage, and timepoint information from sample name
+# 4:57pm - should check BG's script for this
 extract_info = function(name) {
   parts = strsplit(name, "_")[[1]]     # parse through sample name by "_"
   drug = parts[2]
@@ -18,29 +21,22 @@ extract_info = function(name) {
   return(list(drug = drug, dosage = dosage, timepoint = timepoint))
 }
 
-### Setup: import libraries, set working directories, get TPM matrix, and gene list (and subset samples optionally)
+### Setup: load libraries, get TPM matrix and gene list (and subset samples optionally)
 library(pheatmap)
 library(ggplot2)
 library(reshape2)
 library(gridExtra)
 
-setwd("/Users/matthewchang/Documents/R/ExpMatrices/")
+setwd("/Volumes/rc/SOM_GENE_BEG33/RNA_seq/hg38/projects/RMS_IHK/Practice_MSC/ExpMatrices/")
 EXP.coding.matrix = read.table("IHK_samples.coding.norm.matrix.txt", header = T)
-EXP.select.matrix = EXP.coding.matrix    # copy over expression matrix
+EXP.select.matrix = EXP.coding.matrix                                                                           # copy over expression matrix
 
-setwd("/Users/matthewchang/Documents/R/GeneSets/")
+setwd("/Volumes/rc/SOM_GENE_BEG33/RNA_seq/hg38/projects/RMS_IHK/Practice_MSC/Genesets")
 gene.list = read.table("MSC_TF_list.txt", header = F, stringsAsFactors = F)
 genes = gene.list$V1
 
-### OPTIONAL: Subset samples
-samples.to.keep <- c("RH4_DMSO_2h_RNA_022924_CWRU", "RH4_DMSO_6h_RNA_022924_CWRU",
-                     "RH4_IHK44_1uM_6h_RNA_022924_CWRU", "RH4_IHK44_100nM_6h_RNA_022924_CWRU",
-                     "RH4_IHK44_1uM_2h_RNA_022924_CWRU", "RH4_IHK44_100nM_2h_RNA_022924_CWRU")
-sample.indices = which(colnames(EXP.coding.matrix) %in% c("gene_id", samples.to.keep))
-EXP.select.matrix = EXP.coding.matrix[, sample.indices]
-
 ### Define the desired drug order
-desired.drug.order = c("A485", "IHK44", "dCBP", "JQAD", "QL", "LS") # Modify this vector to your desired order
+desired.drug.order = c("A485", "IHK44", "dCBP", "JQAD", "QL", "LS")
 
 ### Loop through each gene and generate a heatmap of the log2(TPM + 1) expression values
 for (gene in genes) {
@@ -152,62 +148,76 @@ for (gene in genes) {
   
   grid.arrange(p1$gtable, p2$gtable, ncol = 2)
 }
-
 ################ end of custom heatmaps ################
 
 
 
-# boxplot/violin plot by log2FC by condition separated by multiple genesets
+### 2. box/violin plot by log2FC by condition separated by multiple genesets
 # note: all coding genes did not show me anything good
 
 library(tidyverse)
 
-# Define samples to work on
-samples = c("A485_1uM_2h", "dCBP_1uM_2h", "IHK44_1uM_2h", "JQAD_1uM_2h", "LS_1uM_2h", "QL_1uM_2h")
+samples = c("A485_1uM_6h", "IHK44_1uM_6h", "dCBP_1uM_6h")                                                       # define samples to work on
 
-# Read gene set
-setwd("/Users/matthewchang/Documents/R/GeneSets/")
-geneset = read.table("GRYDER_RH4_CR_TFs.genelist.txt", header = F, stringsAsFactors = F)
+setwd("/Volumes/rc/SOM_GENE_BEG33/RNA_seq/hg38/projects/RMS_IHK/Practice_MSC/GeneSets/")                        # read gene sets
+housekeeping_genes = read.table("house_keeping_genes.txt", header = F, stringsAsFactors = F)
+P3F_target_genes = read.table("GRYDER_PAX3FOXO1_ENHANCERS_KO_DOWN.txt", header = F, stringsAsFactors = F)
+RH4_CR_TFs = read.table("GRYDER_RH4_CR_TFs.genelist.txt", header = F, stringsAsFactors = F)
+housekeeping_genes$gene_set = "Housekeeping genes"
+P3F_target_genes$gene_set = "P3F targets genes"
+RH4_CR_TFs$gene_set = "RH4 CR TFs"
+all_genesets = bind_rows(housekeeping_genes, P3F_target_genes, RH4_CR_TFs)                                      # combine all gene sets
 
-# Create log2FC df
-setwd("/Users/matthewchang/Documents/R/GSEA_log2FC/p300_samples/")
+setwd("/Volumes/rc/SOM_GENE_BEG33/RNA_seq/hg38/projects/RMS_IHK/Practice_MSC/ExpMatrices")
 EXP.log2FC = read.table("EXP.log2FC.txt", header = T, row.names = 1)                                            # read in log2FC values
 colnames(EXP.log2FC) = gsub("^RH4_", "", colnames(EXP.log2FC))                                                  # remove "RH4_" from column names
 
-# Filtering steps
-EXP.log2FC.filter = EXP.log2FC[rownames(EXP.log2FC) %in% geneset$V1, ]                                          # subset genes
+# Filtering
+EXP.log2FC.filter = EXP.log2FC[rownames(EXP.log2FC) %in% all_genesets$V1, ]                                     # subset genes
 EXP.log2FC.filter = EXP.log2FC.filter[, colnames(EXP.log2FC.filter) %in% samples]                               # subset samples
 EXP.log2FC.filter = EXP.log2FC.filter[, samples]                                                                # set the order of the samples
 
-# Transforming steps
+# Transforming
 EXP.log2FC.plot = as.data.frame(EXP.log2FC.filter)                                                              # copy over filtered df
 EXP.log2FC.plot = rownames_to_column(EXP.log2FC.plot, var = "gene")                                             # transfer rownames (genes) to a column
 EXP.log2FC.plot = pivot_longer(EXP.log2FC.plot, cols = -gene, names_to = "sample_name", values_to = "log2FC")   # transform to long format (gene, sample_name, log2FC)
 
+# Merge with gene sets to add gene set information
+EXP.log2FC.plot = left_join(EXP.log2FC.plot, all_genesets, by = c("gene" = "V1"))
+EXP.log2FC.plot$sample_name = factor(EXP.log2FC.plot$sample_name, levels = samples)
+
+# Define custom colors for each sample
+sample_colors = c("A485_1uM_6h" = "red", "IHK44_1uM_6h" = "darkorange", "dCBP_1uM_6h" = "green3")
+
 # Plot
 ggplot(EXP.log2FC.plot, aes(x = sample_name, y = log2FC, fill = sample_name)) +
-  geom_violin(alpha = 0.5) + 
+  geom_violin(alpha = 0.5, scale = "width", width = 0.5) + 
   geom_boxplot(width = 0.1, color = "black", alpha = 0.7, outlier.shape = NA) +  # Boxplot without outliers
+  facet_wrap(~ gene_set, scales = "fixed") +  # Facet by gene set with fixed scales
+  scale_fill_manual(values = sample_colors) +
   labs(x = "Sample Name", 
        y = "Log2FC", 
-       title = "Boxplot of Log2FC values for specified samples (RH4 CR TFs)") +
+       title = "Boxplot of Log2FC for 1uM 6h samples") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 
-################ end of box / violin plots ################ 
+################ end of box/violin plots ################ 
+
+
+
+
+
+### 3. bar plots of a single gene for multiple samples under one condition (e.g., 100nM_2h)
+
+################ end of bar plots ################ 
 
 
 
 
 
 
-
-
-
-
-
-# rankplot (single sample across all coding genes), prints the list of the 20 most downregulated genes by log2FC
+### 4. rankplot (single sample across all coding genes), prints the list of the 20 most downregulated genes by log2FC
 # can change to include multiple sameples (overlap)
 # can change to include a specific gene set
 
@@ -217,12 +227,12 @@ library(tidyverse)
 sample = "QL_100nM_2h"
 
 # Read gene set to locate rank
-setwd("/Users/matthewchang/Documents/R/GeneSets/")
+setwd("/Volumes/rc/SOM_GENE_BEG33/RNA_seq/hg38/projects/RMS_IHK/Practice_MSC/GeneSets/")
 geneset = read.table("GRYDER_RH4_CR_TFs.genelist.txt", header = F, stringsAsFactors = F)
 geneset.name = "GRYDER_RH4_CR_TFs.genelist.txt"
 
 # Create log2FC df
-setwd("/Users/matthewchang/Documents/R/GSEA_log2FC/p300_samples/")
+setwd("/Volumes/rc/SOM_GENE_BEG33/RNA_seq/hg38/projects/RMS_IHK/Practice_MSC/GSEA_log2FC/p300_samples/")
 EXP.log2FC = read.table("EXP.log2FC.txt", header = T, row.names = 1)                                            # read in log2FC values
 colnames(EXP.log2FC) = gsub("^RH4_", "", colnames(EXP.log2FC))                                                  # remove "RH4_" from column names
 
