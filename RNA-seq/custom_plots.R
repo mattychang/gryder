@@ -1,4 +1,4 @@
-### Updated: 08.08.2024 (Matt)
+### Updated: 08.09.2024 (Matt)
 
 ### 1. More heatmaps for RNA-seq 
 # note: looking by gene separated by timepoint, conc and drug tx
@@ -27,128 +27,96 @@ library(ggplot2)
 library(reshape2)
 library(gridExtra)
 
+# EDIT HERE
+gene = "PAX3"
+desired.drug.order = c("JQAD", "LS", "QL", "dCBP", "A485", "IHK44")
+
 setwd("/Volumes/rc/SOM_GENE_BEG33/RNA_seq/hg38/projects/RMS_IHK/Practice_MSC/ExpMatrices/")
 EXP.coding.matrix = read.table("IHK_samples.coding.norm.matrix.txt", header = T)
-EXP.select.matrix = EXP.coding.matrix                                                                           # copy over expression matrix
 
-setwd("/Volumes/rc/SOM_GENE_BEG33/RNA_seq/hg38/projects/RMS_IHK/Practice_MSC/Genesets")
-gene.list = read.table("MSC_TF_list.txt", header = F, stringsAsFactors = F)
-genes = gene.list$V1
+# Filtering for gene
+EXP.filtered.matrix = EXP.coding.matrix[EXP.coding.matrix$gene_id == gene, ]
+rownames(EXP.filtered.matrix) = EXP.filtered.matrix$gene_id
+EXP.filtered.matrix = EXP.filtered.matrix[, -1]
 
-### Define the desired drug order
-desired.drug.order = c("A485", "IHK44", "dCBP", "JQAD", "QL", "LS")
+# Disinclude DMSO and NT (first 4 columns) from drug heatmap
+dmso.nt.heatmap = EXP.filtered.matrix[, 1:4]
+rownames(dmso.nt.heatmap) = EXP.filtered.matrix$gene_id
+EXP.filtered.matrix = EXP.filtered.matrix[, -(1:4)]
 
-### Loop through each gene and generate a heatmap of the log2(TPM + 1) expression values
-for (gene in genes) {
-  # Filter TPM matrix to only include the gene of interest
-  EXP.filtered.matrix = EXP.select.matrix[EXP.select.matrix$gene_id == gene, ]
-  
-  # Safety check: if gene not found, then skip to the next gene
-  if (nrow(EXP.filtered.matrix) == 0) {
-    message("Gene not found: ", gene)
-    next
-  }
-  
-  # Rename row to gene id and remove the gene id column
-  rownames(EXP.filtered.matrix) = EXP.filtered.matrix$gene_id
-  EXP.filtered.matrix = EXP.filtered.matrix[, -1]
-  
-  # Disinclude DMSO and NT (first 4 columns) from drug heatmap
-  dmso.nt.heatmap = EXP.filtered.matrix[, 1:4]
-  rownames(dmso.nt.heatmap) = EXP.filtered.matrix$gene_id
-  EXP.filtered.matrix = EXP.filtered.matrix[, -(1:4)]
-  
-  # Log2 transformation: log2(TPM + 1)
-  dmso.nt.heatmap_log2 = log2(dmso.nt.heatmap + 1)
-  EXP.filtered.matrix_log2 = log2(EXP.filtered.matrix + 1)
-  
-  # Create lists to store the sample's drug, dosage, and timepoint information
-  drugs = character(length(colnames(EXP.filtered.matrix_log2)))
-  dosages = character(length(colnames(EXP.filtered.matrix_log2)))
-  timepoints = character(length(colnames(EXP.filtered.matrix_log2)))
-  
-  # Fill out lists with sample information, calling 'extract_info' function defined above
-  for (j in seq_along(colnames(EXP.filtered.matrix_log2))) {
-    info = extract_info(colnames(EXP.filtered.matrix_log2)[j])
-    drugs[j] = info$drug
-    dosages[j] = info$dosage
-    timepoints[j] = info$timepoint
-  }
-  
-  # Safety check: remove repeats if any
-  unique.drugs = unique(drugs)
-  unique.timepoints = unique(timepoints)
-  unique.dosages = unique(dosages)
-  
-  # Ensure the heatmap follows the desired drug order
-  unique.drugs = intersect(desired.drug.order, unique.drugs)
-  
-  # Initialize a matrix to store the heatmap data with NA values, and rename the rows and columns
-  heatmap.data = matrix(NA, nrow = length(unique.dosages) * length(unique.timepoints), ncol = length(unique.drugs))
-  rownames(heatmap.data) = paste(rep(unique.dosages, each = length(unique.timepoints)), unique.timepoints, sep = "_")
-  colnames(heatmap.data) = unique.drugs
+# Log2 transformation: log2(TPM + 1)
+dmso.nt.heatmap_log2 = log2(dmso.nt.heatmap + 1)
+EXP.filtered.matrix_log2 = log2(EXP.filtered.matrix + 1)
 
-  
-  # Fill the heatmap data
-  for (j in seq_along(colnames(EXP.filtered.matrix_log2))) {
-    drug = drugs[j]
-    dosage = dosages[j]
-    timepoint = timepoints[j]
-    
-    if (paste(dosage, timepoint, sep = "_") %in% rownames(heatmap.data) && drug %in% colnames(heatmap.data)) {
-      heatmap.data[paste(dosage, timepoint, sep = "_"), drug] = EXP.filtered.matrix_log2[1, j]
-    }
-  }
-  
-  # Transform matrix to df for heatmap
-  heatmap.data = as.data.frame(heatmap.data)
-  
-  # Convert logical values to numeric before any operations that require numeric input, rename rownames
-  heatmap.data <- apply(heatmap.data, 2, function(x) as.numeric(x))
-  rownames(heatmap.data) = paste(rep(unique.dosages, each = length(unique.timepoints)), unique.timepoints, sep = "_")
-  
-  # Safety check: remove columns with any NA values
-  heatmap.data = heatmap.data[, colSums(is.na(heatmap.data)) == 0]
-  
-  # Check if heatmap.data is empty after filtering NAs
-  if (ncol(heatmap.data) == 0 || nrow(heatmap.data) == 0) {
-    message("No valid data to plot for gene: ", gene)
-    next
-  }
-  
-  # Update column names to format <DMSO_2h>
-  colnames(dmso.nt.heatmap_log2) <- c("DMSO_2h", "DMSO_6h", "NT_2h", "NT_6h")
-  
-  # Calculate the local min and max for the current gene
-  combined_data_log2 = cbind(dmso.nt.heatmap_log2, EXP.filtered.matrix_log2)
-  local.min = min(combined_data_log2, na.rm = T)
-  local.max = max(combined_data_log2, na.rm = T)
-  
-  # Plot
-  p1 = pheatmap(t(dmso.nt.heatmap_log2), 
-                cluster_rows = F, 
-                cluster_cols = F, 
-                scale = "none", 
-                show_rownames = T, 
-                show_colnames = T,
-                angle_col = 45,
-                breaks = seq(local.min, local.max, length.out = 101),
-                main = paste(gene),
-                legend = F)
-  
-  p2 = pheatmap(heatmap.data, 
-                cluster_rows = F, 
-                cluster_cols = F, 
-                scale = "none", 
-                show_rownames = T, 
-                show_colnames = T,
-                angle_col = 45,
-                breaks = seq(local.min, local.max, length.out = 101),  # Fixed log2 color scale
-                main = paste(gene))
-  
-  grid.arrange(p1$gtable, p2$gtable, ncol = 2)
+# Create lists to store the sample's drug, dosage, and timepoint information
+drugs = character(length(colnames(EXP.filtered.matrix_log2)))
+dosages = character(length(colnames(EXP.filtered.matrix_log2)))
+timepoints = character(length(colnames(EXP.filtered.matrix_log2)))
+for (j in seq_along(colnames(EXP.filtered.matrix_log2))) {
+  info = extract_info(colnames(EXP.filtered.matrix_log2)[j])
+  drugs[j] = info$drug
+  dosages[j] = info$dosage
+  timepoints[j] = info$timepoint
 }
+unique.drugs = unique(drugs)
+unique.timepoints = unique(timepoints)
+unique.dosages = unique(dosages)
+unique.drugs = intersect(desired.drug.order, unique.drugs)
+
+heatmap.data = matrix(NA, nrow = length(unique.dosages) * length(unique.timepoints), ncol = length(unique.drugs))
+rownames(heatmap.data) = paste(rep(unique.dosages, each = length(unique.timepoints)), unique.timepoints, sep = "_")
+colnames(heatmap.data) = unique.drugs
+for (j in seq_along(colnames(EXP.filtered.matrix_log2))) {
+  drug = drugs[j]
+  dosage = dosages[j]
+  timepoint = timepoints[j]
+  
+  if (paste(dosage, timepoint, sep = "_") %in% rownames(heatmap.data) && drug %in% colnames(heatmap.data)) {
+    heatmap.data[paste(dosage, timepoint, sep = "_"), drug] = EXP.filtered.matrix_log2[1, j]
+  }
+}
+heatmap.data = as.data.frame(heatmap.data)
+heatmap.data <- apply(heatmap.data, 2, function(x) as.numeric(x))
+rownames(heatmap.data) = paste(rep(unique.dosages, each = length(unique.timepoints)), unique.timepoints, sep = "_")
+heatmap.data = heatmap.data[, colSums(is.na(heatmap.data)) == 0]
+
+colnames(dmso.nt.heatmap_log2) = c("DMSO_2h", "DMSO_6h", "NT_2h", "NT_6h")
+
+combined_data_log2 = cbind(dmso.nt.heatmap_log2, EXP.filtered.matrix_log2)
+local.min = min(combined_data_log2, na.rm = T)
+local.max = max(combined_data_log2, na.rm = T)
+
+# Plot
+p1 = pheatmap(t(dmso.nt.heatmap_log2), 
+              cluster_rows = F, 
+              cluster_cols = F, 
+              scale = "none", 
+              show_rownames = T, 
+              show_colnames = T,
+              breaks = seq(local.min, local.max, length.out = 101),
+              main = paste(gene),
+              legend = F)
+p2 = pheatmap(heatmap.data, 
+              cluster_rows = F, 
+              cluster_cols = F, 
+              scale = "none", 
+              show_rownames = T, 
+              show_colnames = T,
+              angle_col = 315,
+              breaks = seq(local.min, local.max, length.out = 101), 
+              main = paste(gene))
+grid.arrange(p1$gtable, p2$gtable, ncol = 2, widths = c(0.75, 2.5))
+
 ################ end of custom heatmaps ################
+
+
+
+
+
+
+
+
+
 
 
 
@@ -157,44 +125,46 @@ for (gene in genes) {
 
 library(tidyverse)
 
-samples = c("A485_1uM_6h", "IHK44_1uM_6h", "dCBP_1uM_6h")                                                       # define samples to work on
-
-setwd("/Volumes/rc/SOM_GENE_BEG33/RNA_seq/hg38/projects/RMS_IHK/Practice_MSC/GeneSets/")                        # read gene sets
-housekeeping_genes = read.table("house_keeping_genes.txt", header = F, stringsAsFactors = F)
-P3F_target_genes = read.table("GRYDER_PAX3FOXO1_ENHANCERS_KO_DOWN.txt", header = F, stringsAsFactors = F)
-RH4_CR_TFs = read.table("GRYDER_RH4_CR_TFs.genelist.txt", header = F, stringsAsFactors = F)
-housekeeping_genes$gene_set = "Housekeeping genes"
-P3F_target_genes$gene_set = "P3F targets genes"
-RH4_CR_TFs$gene_set = "RH4 CR TFs"
-all_genesets = bind_rows(housekeeping_genes, P3F_target_genes, RH4_CR_TFs)                                      # combine all gene sets
-
 setwd("/Volumes/rc/SOM_GENE_BEG33/RNA_seq/hg38/projects/RMS_IHK/Practice_MSC/ExpMatrices")
-EXP.log2FC = read.table("EXP.log2FC.txt", header = T, row.names = 1)                                            # read in log2FC values
-colnames(EXP.log2FC) = gsub("^RH4_", "", colnames(EXP.log2FC))                                                  # remove "RH4_" from column names
+EXP.log2FC = read.table("EXP.log2FC.txt", header = T, row.names = 1)
+colnames(EXP.log2FC) = gsub("^RH4_", "", colnames(EXP.log2FC))
 
-# Filtering
+# EDIT HERE
+samples =        c("A485_1uM_6h", 
+                   "IHK44_1uM_6h", 
+                   "dCBP_1uM_6h")
+samples.colors = c("A485_1uM_6h" = "red", 
+                   "IHK44_1uM_6h" = "darkorange", 
+                   "dCBP_1uM_6h" = "green3")
+
+# EDIT HERE
+setwd("/Volumes/rc/SOM_GENE_BEG33/RNA_seq/hg38/projects/RMS_IHK/Practice_MSC/GeneSets/")
+housekeeping_genes = read.table("house_keeping_genes.txt", header = F, stringsAsFactors = F) %>%
+  mutate(gene_set = "Housekeeping genes")
+P3F_target_genes = read.table("GRYDER_PAX3FOXO1_ENHANCERS_KO_DOWN.txt", header = F, stringsAsFactors = F) %>%
+  mutate(gene_set = "P3F targets genes")
+RH4_CR_TFs = read.table("GRYDER_RH4_CR_TFs.genelist.txt", header = F, stringsAsFactors = F) %>%
+  mutate(gene_set = "RH4 CR TFs")
+all_genesets = bind_rows(housekeeping_genes, P3F_target_genes, RH4_CR_TFs)
+
+# Subset for genes and samples
 EXP.log2FC.filter = EXP.log2FC[rownames(EXP.log2FC) %in% all_genesets$V1, ]                                     # subset genes
 EXP.log2FC.filter = EXP.log2FC.filter[, colnames(EXP.log2FC.filter) %in% samples]                               # subset samples
 EXP.log2FC.filter = EXP.log2FC.filter[, samples]                                                                # set the order of the samples
 
-# Transforming
+# Transform for plotting
 EXP.log2FC.plot = as.data.frame(EXP.log2FC.filter)                                                              # copy over filtered df
 EXP.log2FC.plot = rownames_to_column(EXP.log2FC.plot, var = "gene")                                             # transfer rownames (genes) to a column
 EXP.log2FC.plot = pivot_longer(EXP.log2FC.plot, cols = -gene, names_to = "sample_name", values_to = "log2FC")   # transform to long format (gene, sample_name, log2FC)
-
-# Merge with gene sets to add gene set information
 EXP.log2FC.plot = left_join(EXP.log2FC.plot, all_genesets, by = c("gene" = "V1"))
 EXP.log2FC.plot$sample_name = factor(EXP.log2FC.plot$sample_name, levels = samples)
-
-# Define custom colors for each sample
-sample_colors = c("A485_1uM_6h" = "red", "IHK44_1uM_6h" = "darkorange", "dCBP_1uM_6h" = "green3")
 
 # Plot
 ggplot(EXP.log2FC.plot, aes(x = sample_name, y = log2FC, fill = sample_name)) +
   geom_violin(alpha = 0.5, scale = "width", width = 0.5) + 
-  geom_boxplot(width = 0.1, color = "black", alpha = 0.7, outlier.shape = NA) +  # Boxplot without outliers
-  facet_wrap(~ gene_set, scales = "fixed") +  # Facet by gene set with fixed scales
-  scale_fill_manual(values = sample_colors) +
+  geom_boxplot(width = 0.1, color = "black", alpha = 0.7, outlier.shape = NA) +
+  facet_wrap(~ gene_set, scales = "fixed") +
+  scale_fill_manual(values = samples.colors) +
   labs(x = "Sample Name", 
        y = "Log2FC", 
        title = "Boxplot of Log2FC for 1uM 6h samples") +
@@ -208,9 +178,52 @@ ggplot(EXP.log2FC.plot, aes(x = sample_name, y = log2FC, fill = sample_name)) +
 
 
 
-### 3. bar plots of a single gene for multiple samples under one condition (e.g., 100nM_2h)
+
+
+
+
+
+
+### 3. bar plots for a single gene
+
+setwd("/Volumes/rc/SOM_GENE_BEG33/RNA_seq/hg38/projects/RMS_IHK/Practice_MSC/ExpMatrices/")
+EXP.coding.matrix = read.table("IHK_samples.coding.norm.matrix.txt", header = T)
+cols.to.keep = 1:(ncol(EXP.coding.matrix) - 4)
+EXP.coding.matrix = EXP.coding.matrix[, cols.to.keep]
+
+# EDIT HERE
+gene = "MYOD1"
+samples =        c("A485_100nM_2h", 
+                   "dCBP_100nM_2h", 
+                   "IHK44_100nM_2h")
+samples.colors = c("A485_100nM_2h" = "red", 
+                   "IHK44_100nM_2h" = "darkorange", 
+                   "dCBP_100nM_2h" = "green3")
+
+# Filter for gene and subset samples
+EXP.single.gene = EXP.coding.matrix[EXP.coding.matrix$gene_id == gene, ]
+colnames(EXP.single.gene) = gsub("^RH4_", "", colnames(EXP.single.gene))
+colnames(EXP.single.gene) = gsub("_RNA_022924_CWRU", "", colnames(EXP.single.gene))
+EXP.single.gene = EXP.single.gene[, c("gene_id", samples)]
+EXP.single.gene = pivot_longer(EXP.single.gene, cols = -gene_id, names_to = "sample_name", values_to = "expression")
+
+# Plot
+ggplot(EXP.single.gene, aes(x = sample_name, y = expression, fill = sample_name)) +
+  geom_bar(stat = "identity", position = "dodge", width = 0.7) + 
+  scale_fill_manual(values = samples.colors) +
+  labs(x = "Sample Name", 
+       y = "Expression Level", 
+       title = paste("Bar Plot of Expression for", gene)) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ################ end of bar plots ################ 
+
+
+
+
+
+
 
 
 
