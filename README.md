@@ -1,6 +1,6 @@
 # gryder
 
-Bioinformatics analysis scripts used for RNA-seq and ChIP-seq.
+Bioinformatics analysis scripts used for RNA-seq, ChIP-seq, and HiChIP.
 
 ## RNA-seq
 `buildTPM.R` builds an expression (TPM) matrix.
@@ -12,3 +12,5 @@ Bioinformatics analysis scripts used for RNA-seq and ChIP-seq.
 `custom_plots.R` makes other plots.
 
 ## ChIP-seq
+
+## HiChIP
