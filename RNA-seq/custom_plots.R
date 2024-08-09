@@ -5,7 +5,6 @@
 
 ### Functions
 # Extracts drug, dosage, and timepoint information from sample name
-# 4:57pm - should check BG's script for this
 extract_info = function(name) {
   parts = strsplit(name, "_")[[1]]     # parse through sample name by "_"
   drug = parts[2]
@@ -107,6 +106,7 @@ p2 = pheatmap(heatmap.data,
               main = paste(gene))
 grid.arrange(p1$gtable, p2$gtable, ncol = 2, widths = c(0.75, 2.5))
 
+# figure out color scale (show controls do not reflect in color change...)
 ################ end of custom heatmaps ################
 
 
@@ -193,12 +193,22 @@ EXP.coding.matrix = EXP.coding.matrix[, cols.to.keep]
 
 # EDIT HERE
 gene = "MYOD1"
-samples =        c("A485_100nM_2h", 
-                   "dCBP_100nM_2h", 
-                   "IHK44_100nM_2h")
-samples.colors = c("A485_100nM_2h" = "red", 
-                   "IHK44_100nM_2h" = "darkorange", 
-                   "dCBP_100nM_2h" = "green3")
+samples =        c("NT_6h",
+                   "DMSO_6h",
+                   "JQAD_100nM_6h",
+                   "LS_100nM_6h",
+                   "QL_100nM_6h",
+                   "dCBP_100nM_6h",
+                   "A485_100nM_6h", 
+                   "IHK44_100nM_6h")
+samples.colors = c("NT_6h" = "gray80",
+                   "DMSO_6h" = "gray30",
+                   "JQAD_100nM_6h" = "yellow",
+                   "LS_100nM_6h" = "lightblue",
+                   "QL_100nM_6h" = "violet",
+                   "dCBP_100nM_6h" = "green3",
+                   "A485_100nM_6h" = "red", 
+                   "IHK44_100nM_6h" = "darkorange")
 
 # Filter for gene and subset samples
 EXP.single.gene = EXP.coding.matrix[EXP.coding.matrix$gene_id == gene, ]
@@ -208,12 +218,12 @@ EXP.single.gene = EXP.single.gene[, c("gene_id", samples)]
 EXP.single.gene = pivot_longer(EXP.single.gene, cols = -gene_id, names_to = "sample_name", values_to = "expression")
 
 # Plot
-ggplot(EXP.single.gene, aes(x = sample_name, y = expression, fill = sample_name)) +
+ggplot(EXP.single.gene, aes(x = factor(sample_name, levels = samples), y = expression, fill = sample_name)) +
   geom_bar(stat = "identity", position = "dodge", width = 0.7) + 
   scale_fill_manual(values = samples.colors) +
-  labs(x = "Sample Name", 
-       y = "Expression Level", 
-       title = paste("Bar Plot of Expression for", gene)) +
+  labs(x = "sample", 
+       y = "expression level", 
+       title = paste("bar plot of gene expression for", gene)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
