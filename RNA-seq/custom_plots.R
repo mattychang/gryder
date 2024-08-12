@@ -27,7 +27,7 @@ library(reshape2)
 library(gridExtra)
 
 # EDIT HERE
-gene = "PAX3"
+gene = "EP300"
 desired.drug.order = c("JQAD", "LS", "QL", "dCBP", "A485", "IHK44")
 
 setwd("/Volumes/rc/SOM_GENE_BEG33/RNA_seq/hg38/projects/RMS_IHK/Practice_MSC/ExpMatrices/")
@@ -86,15 +86,21 @@ local.min = min(combined_data_log2, na.rm = T)
 local.max = max(combined_data_log2, na.rm = T)
 
 # Plot
+color.scale = colorRampPalette(c("brown", "yellow"))(100)
+custom.breaks.EP300 = seq(5,8.5, length.out =101)
+custom.breaks.CREBBP = seq(6,9, length.out =101)
+custom.breaks.GAPDH = seq(8,10.5, length.out =101)
+# for everything else use seq(local.min, local.max, length.out = 101)
 p1 = pheatmap(t(dmso.nt.heatmap_log2), 
               cluster_rows = F, 
               cluster_cols = F, 
               scale = "none", 
               show_rownames = T, 
               show_colnames = T,
-              breaks = seq(local.min, local.max, length.out = 101),
+              breaks = custom.breaks.EP300,
               main = paste(gene),
-              legend = F)
+              legend = F, 
+              color = color.scale)
 p2 = pheatmap(heatmap.data, 
               cluster_rows = F, 
               cluster_cols = F, 
@@ -102,8 +108,9 @@ p2 = pheatmap(heatmap.data,
               show_rownames = T, 
               show_colnames = T,
               angle_col = 315,
-              breaks = seq(local.min, local.max, length.out = 101), 
-              main = paste(gene))
+              breaks = custom.breaks.EP300, 
+              main = paste(gene), 
+              color = color.scale)
 grid.arrange(p1$gtable, p2$gtable, ncol = 2, widths = c(0.75, 2.5))
 
 # figure out color scale (show controls do not reflect in color change...)
@@ -186,6 +193,7 @@ ggplot(EXP.log2FC.plot, aes(x = sample_name, y = log2FC, fill = sample_name)) +
 
 ### 3. bar plots for a single gene
 
+library(tidyverse)
 setwd("/Volumes/rc/SOM_GENE_BEG33/RNA_seq/hg38/projects/RMS_IHK/Practice_MSC/ExpMatrices/")
 EXP.coding.matrix = read.table("IHK_samples.coding.norm.matrix.txt", header = T)
 cols.to.keep = 1:(ncol(EXP.coding.matrix) - 4)
@@ -223,7 +231,7 @@ ggplot(EXP.single.gene, aes(x = factor(sample_name, levels = samples), y = expre
   scale_fill_manual(values = samples.colors) +
   labs(x = "sample", 
        y = "expression level", 
-       title = paste("bar plot of gene expression for", gene)) +
+       title = paste("bar plot of gene expression levels for", gene)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
